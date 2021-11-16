@@ -24,9 +24,12 @@ class Asset(db.Model):
 	width = db.Column(db.Integer, nullable=False)
 	height = db.Column(db.Integer, nullable=False)
 	created_at = db.Column(db.DateTime, nullable=False)
+	plant_id = db.Column(db.Integer, db.ForeignKey('plant.id'),
+        nullable=False)
 
 	def __init__(self, **kwargs):
 		self.create(kwargs.get("image_data"))
+		self.plant_id = kwargs.get('plant_id')
 
 	def serialize(self):
 		return {
@@ -76,3 +79,33 @@ class Asset(db.Model):
 		object_acl.put(ACL="public-read")
 
 		os.remove(img_temp_location)
+
+class Plant(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+		watering_time = db.Column(db.Float, nullable=False)
+		name = db.Column(db.String, nullable=False),
+		plant_tag = db.Column(db.String, nullable=False)
+		time_elapsed = db.Column(db.Float, nullable=False)
+		start_time = db.Column(db.DateTime, nullable=False)
+		creation_date = db.Column(db.DateTime, nullable=False)
+		asset = db.relationship('Asset', back_populates='plant', lazy=True, cascade='delete')
+
+    def __init__(self, **kwargs):
+        self.watering_time = kwargs.get('watering_time')
+        self.name = kwargs.get('name')
+        self.plant_tag = kwargs.get('plant_tag')
+				self.time_elapsed = 0
+				self.start_time = datetime.now()
+				self.creation_date = datetime.now()
+
+    def serialize(self):
+        return {
+            'id': self.id,
+            'watering_time': self.watering_time,
+            'name': self.name,
+            'plant_tag': self.plant_tag,
+            'time_elapsed': self.time_elapsed,
+						'start_time': str(self.start_time),
+						'creation_date': str(self.creation_date),
+						'image': self.asset.serialize()
+        }
