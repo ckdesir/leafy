@@ -89,6 +89,7 @@ class Plant(db.Model):
     plant_tag = db.Column(db.String, nullable=False)
     time_elapsed = db.Column(db.Float, nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
+    watering_date = db.Column(db.DateTime, nullable=False)
     creation_date = db.Column(db.DateTime, nullable=False)
     asset = db.relationship(
         'Asset', back_populates='plant', lazy=True, cascade='delete')
@@ -98,8 +99,10 @@ class Plant(db.Model):
         self.name = kwargs.get('name')
         self.plant_tag = kwargs.get('plant_tag')
         self.time_elapsed = 0
-        self.start_time = datetime.now()
-        self.creation_date = datetime.now()
+        self.start_time = datetime.now(datetime.timezone.utc)
+        self.watering_date = self.start_time + \
+            datetime.timedelta(milliseconds=self.watering_time)
+        self.creation_date = datetime.now(datetime.timezone.utc)
 
     def serialize(self):
         return {
@@ -109,6 +112,7 @@ class Plant(db.Model):
             'plant_tag': self.plant_tag,
             'time_elapsed': self.time_elapsed,
             'start_time': str(self.start_time),
+            'watering_date': str(self.watering_date),
             'creation_date': str(self.creation_date),
             'image': self.asset.serialize()
         }
