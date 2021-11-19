@@ -5,6 +5,7 @@ import os
 import random
 import re
 import string
+from user import *
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from io import BytesIO
@@ -29,7 +30,7 @@ class Asset(db.Model):
                          nullable=False)
 
     def __init__(self, **kwargs):
-        self.create(kwargs.get("image_data"))
+        self._create(kwargs.get("image"))
         self.plant_id = kwargs.get('plant_id')
 
     def serialize(self):
@@ -37,7 +38,7 @@ class Asset(db.Model):
             "url": f"{self.base_url}/{self.salt}.{self.extension}",
         }
 
-    def create(self, image_data):
+    def _create(self, image_data):
         ext = guess_extension(guess_type(image_data)[0])[1:]
         if ext not in EXTENSIONS:
             raise Exception(f"Extension {ext} is not supported! :(")
@@ -64,9 +65,9 @@ class Asset(db.Model):
         self.created_at = datetime.datetime.now()
 
         img_filename = f"{salt}.{ext}"
-        self.upload(img, img_filename)
+        self._upload(img, img_filename)
 
-    def upload(self, img, img_filename):
+    def _upload(self, img, img_filename):
         img_temp_location = f"{BASEDIR}/{img_filename}"
         img.save(img_temp_location)
 
@@ -92,9 +93,12 @@ class Plant(db.Model):
     watering_date = db.Column(db.DateTime, nullable=False)
     creation_date = db.Column(db.DateTime, nullable=False)
     asset = db.relationship(
-        'Asset', back_populates='plant', lazy=True, cascade='delete')
+        'Asset', back_populates='plant', lazy=True, cascade='delete', uselist=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'),
+                        nullable=False)
 
     def __init__(self, **kwargs):
+        self.user_id = kwargs.get('user_id')
         self.watering_time = kwargs.get('watering_time')
         self.name = kwargs.get('name')
         self.plant_tag = kwargs.get('plant_tag')
@@ -107,6 +111,7 @@ class Plant(db.Model):
     def serialize(self):
         return {
             'id': self.id,
+            'user_id': self.user_id,
             'watering_time': self.watering_time,
             'name': self.name,
             'plant_tag': self.plant_tag,
