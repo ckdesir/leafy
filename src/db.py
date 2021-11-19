@@ -33,6 +33,9 @@ class Asset(db.Model):
         self._create(kwargs.get("image"))
         self.plant_id = kwargs.get('plant_id')
 
+    def return_url(self):
+        return f"{self.base_url}/{self.salt}.{self.extension}"
+
     def serialize(self):
         return {
             "url": f"{self.base_url}/{self.salt}.{self.extension}",
@@ -98,15 +101,16 @@ class Plant(db.Model):
                         nullable=False)
 
     def __init__(self, **kwargs):
+        now = datetime.now(datetime.timezone.utc)
         self.user_id = kwargs.get('user_id')
         self.watering_time = kwargs.get('watering_time')
         self.name = kwargs.get('name')
         self.plant_tag = kwargs.get('plant_tag')
         self.time_elapsed = 0
-        self.start_time = datetime.now(datetime.timezone.utc)
+        self.start_time = now
         self.watering_date = self.start_time + \
             datetime.timedelta(milliseconds=self.watering_time)
-        self.creation_date = datetime.now(datetime.timezone.utc)
+        self.creation_date = now
 
     def serialize(self):
         return {
@@ -119,5 +123,5 @@ class Plant(db.Model):
             'start_time': str(self.start_time),
             'watering_date': str(self.watering_date),
             'creation_date': str(self.creation_date),
-            'image': self.asset.serialize()
+            'image': self.asset.return_url()
         }

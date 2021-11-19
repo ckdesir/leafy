@@ -55,7 +55,8 @@ def register_accont():
     return success_response({
         "session_token": user.session_token,
         "session_expiration": str(user.session_expiration),
-        "refresh_token": user.refresh_token
+        "refresh_token": user.refresh_token,
+        "refresh_expiration": str(user.refresh_expiration)
     }, 201)
 
 
@@ -77,11 +78,12 @@ def login():
     return success_response({
         "session_token": user.session_token,
         "session_expiration": str(user.session_expiration),
-        "refresh_token": user.refresh_token
+        "refresh_token": user.refresh_token,
+        "refresh_expiration": str(user.refresh_expiration)
     })
 
 
-@app.route("/session/", methods=["POST"])
+@app.route("/reauthenticate/", methods=["POST"])
 def reauthenticate():
     success, refresh_token = extract_token(request)
 
@@ -99,7 +101,8 @@ def reauthenticate():
     return success_response({
         "session_token": user.session_token,
         "session_expiration": str(user.session_expiration),
-        "refresh_token": user.refresh_token
+        "refresh_token": user.refresh_token,
+        "refresh_expiration": str(user.refresh_expiration)
     })
 
 
@@ -119,7 +122,6 @@ def get_all_plants():
         return failure_response("No user found")
 
     if user.verify_session_token(session_token):
-        # Should reauthenticate and try again
         return failure_response("Session token has expired, must reauthenticate", 403)
 
     plants = [p.serialize() for p in user.plants]
@@ -149,8 +151,44 @@ def get_a_plant(id):
 
     if plant is None:
         return failure_response('No plant exists by this id.')
-        
+
     return success_response(plant.serialize())
+
+
+@app.route('/plants/', methods=['POST'])
+def create_a_plant():
+    body = json.loads(request.data)
+    success, session_token = extract_token(request)
+    if not success:
+        return failure_response(session_token)
+
+    user = db.session.query(User).filter(
+        User.session_token == session
+    ).first()
+
+    if user is None:
+        return failure_response("No user found")
+
+    if user.verify_session_token(session_token):
+        return failure_response("Session token has expired, must reauthenticate", 403)
+
+    watering_time = body.get('watering_time')
+    name = body.get('name')
+    plant_tag = body.get('plant_tag')
+    image = body.get('image')
+    if watering_time is None or name is None or plant_tag is None or image is None:
+        return failure_response('The request is missing required information.', 400)
+
+    plant = Plant(user_id=user.id, watering_time=watering_time,
+                  name=name, plant_tag=plant_tag)
+    db.session.add(plant)
+    db.session.flush()
+
+    asset = Asset(image=image, plant_id=plant.id)
+    plant.asset = asset
+    user.plants.append(plant)
+
+    db.session.commit()
 
 
 if __name__ == '__main__':
