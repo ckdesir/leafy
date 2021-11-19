@@ -2,7 +2,6 @@
 from flask.globals import session
 from config import Config
 from db import *
-from user import *
 from flask import Flask, request
 import json
 from datetime import datetime
@@ -43,7 +42,7 @@ def register_accont():
     password = body.get('password')
 
     if username is None or password is None:
-        return failure_response("Invalid username or password", 400)
+        return failure_response("Missing required arguments", 400)
 
     created, user = User.create_user(username, password)
 
@@ -68,7 +67,7 @@ def login():
     password = body.get('password')
 
     if username is None or password is None:
-        return failure_response("Invalid username or password", 400)
+        return failure_response("Missing required arguments", 400)
 
     valid_creds, user = User.verify_credentials(username, password)
 
@@ -115,16 +114,18 @@ def get_all_plants():
         return failure_response(session_token)
 
     user = db.session.query(User).filter(
-        User.session_token == session
+        User.session_token == session_token
     ).first()
 
     if user is None:
         return failure_response("No user found")
 
-    if user.verify_session_token(session_token):
+    if not user.verify_session_token(session_token):
         return failure_response("Session token has expired, must reauthenticate", 403)
 
-    plants = [p.serialize() for p in user.plants]
+    plants = [p.serialize() for p in db.session.query(
+        Plant).filter(User.id == user.id).all()]
+
     return success_response({
         'plants': plants
     })
@@ -137,13 +138,13 @@ def get_a_plant(id):
         return failure_response(session_token)
 
     user = db.session.query(User).filter(
-        User.session_token == session
+        User.session_token == session_token
     ).first()
 
     if user is None:
         return failure_response("No user found")
 
-    if user.verify_session_token(session_token):
+    if not user.verify_session_token(session_token):
         return failure_response("Session token has expired, must reauthenticate", 403)
 
     plant = db.session.query(Plant).filter(
@@ -155,6 +156,43 @@ def get_a_plant(id):
     return success_response(plant.serialize())
 
 
+@app.route('/plants/remove/<int:id>/')
+def remove_a_plant(id):
+    success, session_token = extract_token(request)
+    if not success:
+        return failure_response(session_token)
+
+    user = db.session.query(User).filter(
+        User.session_token == session_token
+    ).first()
+
+    if user is None:
+        return failure_response("No user found")
+
+    if not user.verify_session_token(session_token):
+        return failure_response("Session token has expired, must reauthenticate", 403)
+
+    plant = db.session.query(Plant).filter(
+        User.id == user.id, Plant.id == id).first()
+
+    if plant is None:
+        return failure_response('No plant exists by this id.')
+
+    asset = db.session.query(Asset).filter(
+        Plant.id == plant.id
+    ).first()
+    asset.remove_from_aws()
+
+    db.session.delete(plant)
+
+    db.session.commit()
+
+    return success_response({
+        "sucess": True,
+        "response": "Plant removed successfully!"
+    })
+
+
 @app.route('/plants/', methods=['POST'])
 def create_a_plant():
     body = json.loads(request.data)
@@ -163,13 +201,13 @@ def create_a_plant():
         return failure_response(session_token)
 
     user = db.session.query(User).filter(
-        User.session_token == session
+        User.session_token == session_token
     ).first()
 
     if user is None:
         return failure_response("No user found")
 
-    if user.verify_session_token(session_token):
+    if not user.verify_session_token(session_token):
         return failure_response("Session token has expired, must reauthenticate", 403)
 
     watering_time = body.get('watering_time')
@@ -181,14 +219,20 @@ def create_a_plant():
 
     plant = Plant(user_id=user.id, watering_time=watering_time,
                   name=name, plant_tag=plant_tag)
+
     db.session.add(plant)
     db.session.flush()
 
     asset = Asset(image=image, plant_id=plant.id)
+    db.session.add(asset)
+
+    asset.plant = plant
     plant.asset = asset
+    plant.user = user
     user.plants.append(plant)
 
     db.session.commit()
+    return success_response(plant.serialize(), code=201)
 
 
 if __name__ == '__main__':
