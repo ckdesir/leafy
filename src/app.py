@@ -1,5 +1,3 @@
-#from apscheduler.schedulers.background import BackgroundScheduler
-
 import json
 import os
 from config import Config
