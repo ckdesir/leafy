@@ -191,7 +191,7 @@ class Asset(db.Model):
 class Plant(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     watering_time = db.Column(db.Float, nullable=False)
-    name = db.Column(db.String, nullable=False),
+    name = db.Column(db.String, nullable=False)
     plant_tag = db.Column(db.String, nullable=False)
     time_elapsed = db.Column(db.Float, nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)

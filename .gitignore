@@ -130,3 +130,7 @@ dmypy.json
 
 src/constants.py
 src/user.py
+
+leafy.db
+
+request

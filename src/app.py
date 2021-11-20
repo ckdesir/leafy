@@ -1,12 +1,15 @@
 #from apscheduler.schedulers.background import BackgroundScheduler
-from flask.globals import session
+
+import json
+import os
 from config import Config
+from constants import SECONDS_TO_MILLISECONDS_CONVERSION
+from datetime import datetime
 from db import *
 from flask import Flask, request
-import json
-from datetime import datetime
 from flask_apscheduler import APScheduler
-import os
+from flask.globals import session
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -17,6 +20,16 @@ with app.app_context():
 sched = APScheduler()
 sched.init_app(app)
 sched.start()
+
+
+@sched.task('interval', id='update_time_elapsed', minutes=30)
+def update_time_elapsed():
+    with app.app_context():
+        for plant in db.session.query(Plant).all():
+            plant.time_elapsed = float(SECONDS_TO_MILLISECONDS_CONVERSION *
+                                       (datetime.utcnow() - plant.start_time).total_seconds())
+
+        db.session.commit()
 
 
 def success_response(data, code=200):
@@ -49,8 +62,6 @@ def register_accont():
     if not created:
         return failure_response("This username is already being used", 403)
 
-    # A registered user is authenticated, it's session token and refresh token are valid
-
     return success_response({
         "session_token": user.session_token,
         "session_expiration": str(user.session_expiration),
@@ -59,7 +70,6 @@ def register_accont():
     }, 201)
 
 
-# One should have to log-in only if their session_token has expired or their refresh_token
 @app.route("/login/", methods=["POST"])
 def login():
     body = json.loads(request.data)
@@ -104,9 +114,6 @@ def reauthenticate():
         "refresh_expiration": str(user.refresh_expiration)
     })
 
-
-# Being validated requires access with the session_token; if the session_token has expired, the client
-# can reauthenticate with the refresh_token if it is still valid (with update_session). If both are bad, then the user must log-in again.
 @app.route('/plants/')
 def get_all_plants():
     success, session_token = extract_token(request)
