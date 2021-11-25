@@ -239,6 +239,37 @@ def create_a_plant():
     db.session.commit()
     return success_response(plant.serialize(), code=201)
 
+@app.route('/plants/water/<int:id>',  methods=['POST'])
+def water_plant(id):
+    success, session_token = extract_token(request)
+    if not success:
+        return failure_response(session_token)
+
+    user = db.session.query(User).filter(
+        User.session_token == session_token
+    ).first()
+
+    if user is None:
+        return failure_response("No user found")
+
+    if not user.verify_session_token(session_token):
+        return failure_response("Session token has expired, must reauthenticate", 403)
+
+    plant = db.session.query(Plant).filter(
+        User.id == user.id, Plant.id == id).first()
+
+    if plant is None:
+        return failure_response('No plant exists by this id.')
+
+    plant.start_time = datetime.now(datetime.timezone.utc)
+    plant.time_elapsed = 0
+    plant.watering_date = plant.start_time + datetime.timedelta(milliseconds=plant.watering_time)
+
+    db.session.commit()
+    return success_response(plant.serialize())
+
+
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
