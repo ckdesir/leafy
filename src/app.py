@@ -1,9 +1,9 @@
 import json
 import os
+import datetime
+from db import User, Plant, Asset, db
 from config import Config
 from constants import SECONDS_TO_MILLISECONDS_CONVERSION
-from datetime import datetime
-from db import *
 from flask import Flask, request
 from flask_apscheduler import APScheduler
 from flask.globals import session
@@ -25,8 +25,7 @@ def update_time_elapsed():
     with app.app_context():
         for plant in db.session.query(Plant).all():
             plant.time_elapsed = float(SECONDS_TO_MILLISECONDS_CONVERSION *
-                                       (datetime.utcnow() - plant.start_time).total_seconds())
-
+                                       (datetime.datetime.utcnow() - plant.start_time).total_seconds())
         db.session.commit()
 
 
@@ -127,9 +126,6 @@ def get_all_plants():
 
     if not user.verify_session_token(session_token):
         return failure_response("Session token has expired, must reauthenticate", 403)
-
-    # plants = [p.serialize() for p in db.session.query(
-    #      Plant).filter(User.id == user.id).all()]
 
     plants = [p.serialize() for p in db.session.query(
         Plant).join(User).filter(User.id == user.id).all()]
@@ -264,13 +260,12 @@ def water_plant(id):
     if plant is None:
         return failure_response('No plant exists by this id.')
 
-    plant.start_time = datetime.now(datetime.timezone.utc)
+    plant.start_time = datetime.datetime.now(datetime.datetime.timezone.utc)
     plant.time_elapsed = 0
-    plant.watering_date = plant.start_time + datetime.timedelta(milliseconds=plant.watering_time)
+    plant.watering_date = plant.start_time + datetime.datetime.timedelta(milliseconds=plant.watering_time)
 
     db.session.commit()
     return success_response(plant.serialize())
-
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
