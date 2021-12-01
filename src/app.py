@@ -128,8 +128,11 @@ def get_all_plants():
     if not user.verify_session_token(session_token):
         return failure_response("Session token has expired, must reauthenticate", 403)
 
+    # plants = [p.serialize() for p in db.session.query(
+    #      Plant).filter(User.id == user.id).all()]
+
     plants = [p.serialize() for p in db.session.query(
-        Plant).filter(User.id == user.id).all()]
+        Plant).join(User).filter(User.id == user.id).all()]
 
     return success_response({
         'plants': plants
@@ -152,7 +155,7 @@ def get_a_plant(id):
     if not user.verify_session_token(session_token):
         return failure_response("Session token has expired, must reauthenticate", 403)
 
-    plant = db.session.query(Plant).filter(
+    plant = db.session.query(Plant).join(User).filter(
         User.id == user.id, Plant.id == id).first()
 
     if plant is None:
@@ -177,13 +180,13 @@ def remove_a_plant(id):
     if not user.verify_session_token(session_token):
         return failure_response("Session token has expired, must reauthenticate", 403)
 
-    plant = db.session.query(Plant).filter(
+    plant = db.session.query(Plant).join(User).filter(
         User.id == user.id, Plant.id == id).first()
 
     if plant is None:
         return failure_response('No plant exists by this id.')
 
-    asset = db.session.query(Asset).filter(
+    asset = db.session.query(Asset).join(Plant).filter(
         Plant.id == plant.id
     ).first()
     asset.remove_from_aws()
@@ -255,7 +258,7 @@ def water_plant(id):
     if not user.verify_session_token(session_token):
         return failure_response("Session token has expired, must reauthenticate", 403)
 
-    plant = db.session.query(Plant).filter(
+    plant = db.session.query(Plant).join(User).filter(
         User.id == user.id, Plant.id == id).first()
 
     if plant is None:
@@ -269,8 +272,6 @@ def water_plant(id):
     return success_response(plant.serialize())
 
 
-
-
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)
