@@ -216,13 +216,12 @@ def create_a_plant():
 
     watering_time = body.get('watering_time')
     name = body.get('name')
-    plant_tag = body.get('plant_tag')
     image = body.get('image')
-    if watering_time is None or name is None or plant_tag is None or image is None:
+    if watering_time is None or name is None or image is None:
         return failure_response('The request is missing required information.', 400)
 
     plant = Plant(user_id=user.id, watering_time=watering_time,
-                  name=name, plant_tag=plant_tag)
+                  name=name)
 
     db.session.add(plant)
     db.session.flush()
