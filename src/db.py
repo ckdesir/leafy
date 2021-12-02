@@ -192,7 +192,6 @@ class Plant(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     watering_time = db.Column(db.Float, nullable=False)
     name = db.Column(db.String, nullable=False)
-    plant_tag = db.Column(db.String, nullable=False)
     time_elapsed = db.Column(db.Float, nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
     watering_date = db.Column(db.DateTime, nullable=False)
@@ -208,7 +207,6 @@ class Plant(db.Model):
         self.user_id = kwargs.get('user_id')
         self.watering_time = kwargs.get('watering_time')
         self.name = kwargs.get('name')
-        self.plant_tag = kwargs.get('plant_tag')
         self.time_elapsed = 0
         self.start_time = now
         self.watering_date = self.start_time + \
@@ -221,7 +219,6 @@ class Plant(db.Model):
             'user_id': self.user_id,
             'watering_time': self.watering_time,
             'name': self.name,
-            'plant_tag': self.plant_tag,
             'time_elapsed': self.time_elapsed,
             'start_time': str(self.start_time),
             'watering_date': str(self.watering_date),
