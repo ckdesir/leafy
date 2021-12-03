@@ -237,7 +237,7 @@ def create_a_plant():
     db.session.commit()
     return success_response(plant.serialize(), code=201)
 
-@app.route('/plants/water/<int:id>',  methods=['POST'])
+@app.route('/plants/water/<int:id>/',  methods=['POST'])
 def water_plant(id):
     success, session_token = extract_token(request)
     if not success:
@@ -259,9 +259,9 @@ def water_plant(id):
     if plant is None:
         return failure_response('No plant exists by this id.')
 
-    plant.start_time = datetime.datetime.now(datetime.datetime.timezone.utc)
+    plant.start_time = datetime.datetime.now(datetime.timezone.utc)
     plant.time_elapsed = 0
-    plant.watering_date = plant.start_time + datetime.datetime.timedelta(milliseconds=plant.watering_time)
+    plant.watering_date = plant.start_time + datetime.timedelta(milliseconds=plant.watering_time)
 
     db.session.commit()
     return success_response(plant.serialize())
