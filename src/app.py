@@ -1,6 +1,6 @@
 import json
 import os
-import datetime
+from datetime import timezone, timedelta, datetime
 from db import User, Plant, Asset, db
 from config import Config
 from constants import SECONDS_TO_MILLISECONDS_CONVERSION
@@ -25,7 +25,7 @@ def update_time_elapsed():
     with app.app_context():
         for plant in db.session.query(Plant).all():
             plant.time_elapsed = float(SECONDS_TO_MILLISECONDS_CONVERSION *
-                                       (datetime.datetime.utcnow() - plant.start_time).total_seconds())
+                                       (datetime.utcnow() - plant.start_time).total_seconds())
         db.session.commit()
 
 
@@ -110,6 +110,7 @@ def reauthenticate():
         "refresh_token": user.refresh_token,
         "refresh_expiration": str(user.refresh_expiration)
     })
+
 
 @app.route('/plants/')
 def get_all_plants():
@@ -221,7 +222,7 @@ def create_a_plant():
         return failure_response('The request is missing required information.', 400)
 
     plant = Plant(user_id=user.id, watering_time=watering_time,
-                  name=name)
+                  name=name, plant_tag="Plant")
 
     db.session.add(plant)
     db.session.flush()
@@ -237,7 +238,8 @@ def create_a_plant():
     db.session.commit()
     return success_response(plant.serialize(), code=201)
 
-@app.route('/plants/water/<int:id>',  methods=['POST'])
+
+@app.route('/plants/water/<int:id>/',  methods=['POST'])
 def water_plant(id):
     success, session_token = extract_token(request)
     if not success:
@@ -259,12 +261,14 @@ def water_plant(id):
     if plant is None:
         return failure_response('No plant exists by this id.')
 
-    plant.start_time = datetime.datetime.now(datetime.datetime.timezone.utc)
+    plant.start_time = datetime.now(timezone.utc)
     plant.time_elapsed = 0
-    plant.watering_date = plant.start_time + datetime.datetime.timedelta(milliseconds=plant.watering_time)
+    plant.watering_date = plant.start_time + \
+        timedelta(milliseconds=plant.watering_time)
 
     db.session.commit()
     return success_response(plant.serialize())
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

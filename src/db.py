@@ -196,6 +196,7 @@ class Plant(db.Model):
     start_time = db.Column(db.DateTime, nullable=False)
     watering_date = db.Column(db.DateTime, nullable=False)
     creation_date = db.Column(db.DateTime, nullable=False)
+    plant_tag = db.Column(db.String, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'),
                         nullable=False)
     asset = db.relationship(
@@ -207,6 +208,7 @@ class Plant(db.Model):
         self.user_id = kwargs.get('user_id')
         self.watering_time = kwargs.get('watering_time')
         self.name = kwargs.get('name')
+        self.plant_tag = kwargs.get('plant_tag')
         self.time_elapsed = 0
         self.start_time = now
         self.watering_date = self.start_time + \
