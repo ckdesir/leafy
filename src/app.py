@@ -1,6 +1,5 @@
 import json
 import os
-import datetime
 from datetime import timezone, timedelta, datetime
 from db import User, Plant, Asset, db
 from config import Config
@@ -112,6 +111,7 @@ def reauthenticate():
         "refresh_expiration": str(user.refresh_expiration)
     })
 
+
 @app.route('/plants/')
 def get_all_plants():
     success, session_token = extract_token(request)
@@ -222,7 +222,7 @@ def create_a_plant():
         return failure_response('The request is missing required information.', 400)
 
     plant = Plant(user_id=user.id, watering_time=watering_time,
-                  name=name)
+                  name=name, plant_tag="Plant")
 
     db.session.add(plant)
     db.session.flush()
@@ -237,6 +237,7 @@ def create_a_plant():
 
     db.session.commit()
     return success_response(plant.serialize(), code=201)
+
 
 @app.route('/plants/water/<int:id>/',  methods=['POST'])
 def water_plant(id):
@@ -262,10 +263,12 @@ def water_plant(id):
 
     plant.start_time = datetime.now(timezone.utc)
     plant.time_elapsed = 0
-    plant.watering_date = plant.start_time + timedelta(milliseconds=plant.watering_time)
+    plant.watering_date = plant.start_time + \
+        timedelta(milliseconds=plant.watering_time)
 
     db.session.commit()
     return success_response(plant.serialize())
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
